@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>모임 신청 | 모임 모집 시스템</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+</head>
+<body>
+  <!-- 헤더 -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="back-btn"><i class="fas fa-arrow-left"></i> 홈으로</a>
+      <div class="logo">
+        <i class="fas fa-user-check"></i>
+        <span>참가자 신청</span>
+      </div>
+      <div style="width:80px"></div>
+    </div>
+  </header>
+
+  <main class="page-main">
+    <!-- 안내 배너 -->
+    <div class="info-banner">
+      <i class="fas fa-circle-info"></i>
+      <span>아래 모집 중인 모임을 선택하고 신청서를 작성해 주세요.</span>
+    </div>
+
+    <!-- 모임 목록 -->
+    <section class="section-block">
+      <h2 class="section-title"><i class="fas fa-list-ul"></i> 현재 모집 중인 모임</h2>
+      <div id="meetingList" class="meeting-list">
+        <div class="loading-state">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>모임 목록 불러오는 중...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 신청 폼 (모임 선택 후 표시) -->
+    <section id="applySection" class="section-block" style="display:none;">
+      <h2 class="section-title"><i class="fas fa-pen-to-square"></i> 신청서 작성</h2>
+
+      <div class="selected-meeting-info" id="selectedMeetingInfo"></div>
+
+      <form id="applyForm" class="apply-form" novalidate>
+        <div class="form-group">
+          <label for="userName">이름 <span class="required">*</span></label>
+          <input type="text" id="userName" placeholder="실명을 입력해 주세요" maxlength="20" autocomplete="name" />
+          <span class="field-hint">예: 홍길동</span>
+        </div>
+        <div class="form-group">
+          <label for="userPhone">전화번호 <span class="required">*</span></label>
+          <input type="tel" id="userPhone" placeholder="010-0000-0000" maxlength="13" inputmode="numeric" autocomplete="tel" />
+          <span class="field-hint">숫자만 입력하면 자동으로 하이픈이 붙습니다.</span>
+        </div>
+        <div class="form-group">
+          <label for="userAccount">계좌번호 <span class="required">*</span></label>
+          <input type="text" id="userAccount" placeholder="예: 신한 110-123-456789" maxlength="40" inputmode="numeric" />
+          <span class="field-hint">은행명과 계좌번호를 함께 입력해 주세요.</span>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="cancelApply" class="btn btn-secondary">
+            <i class="fas fa-xmark"></i> 취소
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-paper-plane"></i> 신청하기
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- 신청 완료 메시지 -->
+    <div id="successMessage" class="success-overlay" style="display:none;">
+      <div class="success-box">
+        <div class="success-icon"><i class="fas fa-circle-check"></i></div>
+        <h3>신청이 완료되었습니다!</h3>
+        <p id="successDetail"></p>
+        <button class="btn btn-primary" onclick="resetForm()">
+          <i class="fas fa-rotate-left"></i> 처음으로
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>문의사항은 모임 주최자에게 연락해 주세요.</p>
+  </footer>
+
+  <script>
+    // ─── 상태 ────────────────────────────────────────────────
+    let selectedMeeting = null;
+
+    // ─── 유틸 ────────────────────────────────────────────────
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (isNaN(d)) return dateStr;
+      return d.toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric', weekday:'short' });
+    }
+
+    function formatPhone(v) {
+      const n = v.replace(/\D/g,'');
+      if (n.length < 4) return n;
+      if (n.length < 8) return n.slice(0,3)+'-'+n.slice(3);
+      return n.slice(0,3)+'-'+n.slice(3,7)+'-'+n.slice(7,11);
+    }
+
+    // ─── 모임 목록 로드 ───────────────────────────────────────
+    async function loadMeetings() {
+      const listEl = document.getElementById('meetingList');
+      try {
+        const res = await fetch('tables/meetings?limit=100&sort=createdAt');
+        const data = await res.json();
+        const meetings = (data.data || []).filter(m => m.status === '모집중');
+
+        if (meetings.length === 0) {
+          listEl.innerHTML = `
+            <div class="empty-state">
+              <i class="fas fa-calendar-xmark"></i>
+              <p>현재 모집 중인 모임이 없습니다.<br>나중에 다시 확인해 주세요.</p>
+            </div>`;
+          return;
+        }
+
+        listEl.innerHTML = '';
+        for (const m of meetings) {
+          // 참가자 수 조회
+          const pRes = await fetch(`tables/participants?limit=1000`);
+          const pData = await pRes.json();
+          const count = (pData.data || []).filter(p => p.meetingId === m.id).length;
+          const full = count >= m.maxParticipants;
+
+          const card = document.createElement('div');
+          card.className = `meeting-card ${full ? 'full' : ''}`;
+          card.innerHTML = `
+            <div class="meeting-card-header">
+              <h3>${m.title}</h3>
+              <span class="badge ${full ? 'badge-full' : 'badge-open'}">${full ? '마감' : '모집중'}</span>
+            </div>
+            <div class="meeting-card-info">
+              <span><i class="fas fa-calendar-day"></i> ${formatDate(m.date)}</span>
+              <span><i class="fas fa-location-dot"></i> ${m.location || '미정'}</span>
+              <span><i class="fas fa-users"></i> ${count} / ${m.maxParticipants}명</span>
+            </div>
+            ${m.description ? `<p class="meeting-desc">${m.description}</p>` : ''}
+            <button class="btn ${full ? 'btn-disabled' : 'btn-primary'} btn-full"
+              onclick="${full ? '' : `selectMeeting('${m.id}')`}"
+              ${full ? 'disabled' : ''}>
+              ${full ? '<i class="fas fa-lock"></i> 마감되었습니다' : '<i class="fas fa-pen-to-square"></i> 이 모임 신청하기'}
+            </button>
+          `;
+          listEl.appendChild(card);
+        }
+      } catch(e) {
+        listEl.innerHTML = `<div class="error-state"><i class="fas fa-triangle-exclamation"></i><p>불러오기 실패. 잠시 후 다시 시도해 주세요.</p></div>`;
+      }
+    }
+
+    // ─── 모임 선택 ────────────────────────────────────────────
+    async function selectMeeting(meetingId) {
+      const res = await fetch(`tables/meetings/${meetingId}`);
+      selectedMeeting = await res.json();
+
+      const infoEl = document.getElementById('selectedMeetingInfo');
+      infoEl.innerHTML = `
+        <div class="selected-badge"><i class="fas fa-circle-check"></i> 선택된 모임</div>
+        <strong>${selectedMeeting.title}</strong>
+        <span>${formatDate(selectedMeeting.date)} · ${selectedMeeting.location || '미정'}</span>
+      `;
+
+      document.getElementById('applySection').style.display = 'block';
+      document.getElementById('applySection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ─── 폼 취소 ─────────────────────────────────────────────
+    document.getElementById('cancelApply').addEventListener('click', () => {
+      selectedMeeting = null;
+      document.getElementById('applySection').style.display = 'none';
+      document.getElementById('applyForm').reset();
+    });
+
+    // ─── 전화번호 자동 포맷 ──────────────────────────────────
+    document.getElementById('userPhone').addEventListener('input', function() {
+      const cur = this.selectionStart;
+      this.value = formatPhone(this.value);
+    });
+
+    // ─── 신청 제출 ────────────────────────────────────────────
+    document.getElementById('applyForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const name    = document.getElementById('userName').value.trim();
+      const phone   = document.getElementById('userPhone').value.trim();
+      const account = document.getElementById('userAccount').value.trim();
+
+      if (!name)    { alert('이름을 입력해 주세요.'); return; }
+      if (!phone || phone.replace(/\D/g,'').length < 10) { alert('전화번호를 올바르게 입력해 주세요.'); return; }
+      if (!account) { alert('계좌번호를 입력해 주세요.'); return; }
+      if (!selectedMeeting) { alert('모임을 선택해 주세요.'); return; }
+
+      // 중복 확인
+      const pRes = await fetch('tables/participants?limit=1000');
+      const pData = await pRes.json();
+      const existing = (pData.data || []).find(p => p.meetingId === selectedMeeting.id && p.phone === phone);
+      if (existing) { alert('이미 같은 전화번호로 신청된 내역이 있습니다.'); return; }
+
+      // 인원 초과 확인
+      const count = (pData.data || []).filter(p => p.meetingId === selectedMeeting.id).length;
+      if (count >= selectedMeeting.maxParticipants) { alert('모집 인원이 마감되었습니다.'); return; }
+
+      const submitBtn = this.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 처리 중...';
+
+      try {
+        await fetch('tables/participants', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            meetingId: selectedMeeting.id,
+            name, phone, account,
+            appliedAt: new Date().toISOString()
+          })
+        });
+
+        document.getElementById('successDetail').textContent =
+          `${selectedMeeting.title} 모임에 ${name}님의 신청이 완료되었습니다.`;
+        document.getElementById('successMessage').style.display = 'flex';
+      } catch(err) {
+        alert('신청 중 오류가 발생했습니다. 다시 시도해 주세요.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 신청하기';
+      }
+    });
+
+    // ─── 초기화 ───────────────────────────────────────────────
+    function resetForm() {
+      selectedMeeting = null;
+      document.getElementById('applyForm').reset();
+      document.getElementById('applySection').style.display = 'none';
+      document.getElementById('successMessage').style.display = 'none';
+      loadMeetings();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    loadMeetings();
+  </script>
+</body>
+</html>
