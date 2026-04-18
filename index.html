@@ -3,93 +3,79 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>모임 모집 시스템</title>
+  <title>걷기모임 모집 시스템</title>
+  <meta name="description" content="날짜와 시간을 지정해 걷기모임 참가자를 모집하고 관리하는 모바일/PC 웹사이트" />
   <link rel="stylesheet" href="css/style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" />
 </head>
 <body>
-  <!-- 헤더 -->
   <header class="site-header">
-    <div class="header-inner">
+    <div class="header-inner center-only">
       <div class="logo">
-        <i class="fas fa-people-group"></i>
-        <span>모임 모집 시스템</span>
+        <i class="fas fa-person-walking"></i>
+        <span>걷기모임 모집 시스템</span>
       </div>
     </div>
   </header>
 
-  <!-- 메인 -->
   <main class="home-main">
-    <!-- 히어로 섹션 -->
     <section class="hero-section">
       <div class="hero-content">
-        <div class="hero-icon">
-          <i class="fas fa-route"></i>
-        </div>
-        <h1 class="hero-title">함께하는 모임 플랫폼</h1>
+        <div class="hero-icon"><i class="fas fa-route"></i></div>
+        <p class="eyebrow">모바일 · PC 실사용 가능</p>
+        <h1 class="hero-title">날짜와 시간을 정해<br />걷기모임 참가자를 모집하세요</h1>
         <p class="hero-desc">
-          걷기, 여행, 문화 탐방 등 다양한 모임을 모집하고<br>
-          참석자를 손쉽게 관리할 수 있습니다.
+          참가자는 모집 중인 걷기모임을 선택해 신청하고,<br />
+          주최자는 별도 관리자 페이지에서 참가자 명단을 확인·출력할 수 있습니다.
         </p>
+        <div class="hero-cta-group">
+          <a href="user.html" class="btn btn-primary btn-lg">
+            <i class="fas fa-user-check"></i> 참가 신청하러 가기
+          </a>
+        </div>
       </div>
     </section>
 
-    <!-- 모드 선택 카드 -->
     <section class="mode-section">
-      <div class="mode-cards">
-        <!-- 참가자 모드 -->
+      <div class="mode-cards one-card">
         <a href="user.html" class="mode-card user-card">
           <div class="card-icon">
-            <i class="fas fa-user-check"></i>
+            <i class="fas fa-clipboard-check"></i>
           </div>
-          <h2>참가자 신청</h2>
-          <p>현재 모집 중인 모임을 확인하고<br>신청서를 제출합니다.</p>
+          <h2>참가자 신청 페이지</h2>
+          <p>
+            모집 중인 걷기모임의 날짜, 시간, 장소를 확인한 뒤<br />
+            이름 · 전화번호 · 계좌번호를 입력해 신청할 수 있습니다.
+          </p>
           <div class="card-steps">
-            <div class="step"><span class="step-num">1</span> 모임 목록 확인</div>
-            <div class="step"><span class="step-num">2</span> 이름·전화번호·계좌번호 입력</div>
+            <div class="step"><span class="step-num">1</span> 모집 중 모임 선택</div>
+            <div class="step"><span class="step-num">2</span> 신청 정보 입력</div>
             <div class="step"><span class="step-num">3</span> 신청 완료</div>
           </div>
           <div class="card-cta">
-            <span>신청하러 가기</span>
-            <i class="fas fa-arrow-right"></i>
-          </div>
-        </a>
-
-        <!-- 관리자 모드 -->
-        <a href="admin.html" class="mode-card admin-card">
-          <div class="card-icon">
-            <i class="fas fa-user-shield"></i>
-          </div>
-          <h2>관리자 모드</h2>
-          <p>모임을 개설하고 참석자 명단을<br>관리합니다. (비밀번호 필요)</p>
-          <div class="card-steps">
-            <div class="step"><span class="step-num">1</span> 비밀번호 로그인</div>
-            <div class="step"><span class="step-num">2</span> 모임 개설 및 관리</div>
-            <div class="step"><span class="step-num">3</span> 참석자 명단 확인·출력</div>
-          </div>
-          <div class="card-cta">
-            <span>관리자 입장</span>
+            <span>참가 페이지 열기</span>
             <i class="fas fa-arrow-right"></i>
           </div>
         </a>
       </div>
     </section>
 
-    <!-- 공지/안내 -->
     <section class="notice-section">
       <div class="notice-box">
         <i class="fas fa-circle-info"></i>
-        <p>이 시스템은 모임 주최자와 참가자 모두 스마트폰·PC에서 사용할 수 있습니다.<br>
-          관리자 초기 비밀번호는 <strong>0000</strong> 입니다. 로그인 후 반드시 변경해 주세요.</p>
+        <p>
+          관리자 페이지는 메인 화면에 노출하지 않습니다.<br />
+          운영자는 <code>/admin.html</code> 주소로 직접 접속해 로그인하세요.
+        </p>
       </div>
     </section>
   </main>
 
-  <!-- 푸터 -->
   <footer class="site-footer">
-    <p>모임 모집 시스템 &copy; 2026</p>
+    <p>걷기모임 모집 시스템 · GitHub + Vercel + Supabase</p>
   </footer>
 </body>
 </html>
