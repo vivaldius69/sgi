@@ -3,684 +3,810 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>관리자 모드 | 모임 모집 시스템</title>
+  <title>관리자 페이지 | 걷기모임 모집 시스템</title>
+  <meta name="description" content="걷기모임 생성, 참가자 명단 관리, 인쇄 및 워드 저장을 위한 관리자 페이지" />
   <link rel="stylesheet" href="css/style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" />
 </head>
 <body>
+  <div id="loginOverlay" class="overlay-bg">
+    <div class="login-box">
+      <div class="login-icon"><i class="fas fa-user-shield"></i></div>
+      <h2>관리자 로그인</h2>
+      <p class="login-desc">
+        Supabase Authentication에 등록된 관리자 계정으로 로그인해 주세요.<br />
+        이 페이지 주소는 운영자만 알고 있어야 합니다.
+      </p>
 
-<!-- ─── 로그인 오버레이 ───────────────────────────────────── -->
-<div id="loginOverlay" class="overlay-bg">
-  <div class="login-box">
-    <div class="login-icon"><i class="fas fa-user-shield"></i></div>
-    <h2>관리자 로그인</h2>
-    <p class="login-desc">관리자 비밀번호를 입력해 주세요.<br>초기 비밀번호: <strong>0000</strong></p>
-    <form onsubmit="doLogin();return false;">
-      <input type="text" name="username" value="admin" autocomplete="username" style="display:none" aria-hidden="true" />
-      <div class="form-group">
-        <label for="loginPwd">비밀번호</label>
-        <div class="input-with-icon">
-          <input type="password" id="loginPwd" placeholder="비밀번호 입력" autocomplete="current-password" />
-          <button type="button" onclick="togglePwd('loginPwd',this)" class="eye-btn">
-            <i class="fas fa-eye"></i>
+      <div id="configAlert" class="config-alert compact" style="display:none;"></div>
+
+      <form id="loginForm" class="apply-form" novalidate>
+        <div class="form-group">
+          <label for="loginEmail">이메일</label>
+          <input type="email" id="loginEmail" placeholder="admin@example.com" autocomplete="email" />
+        </div>
+
+        <div class="form-group">
+          <label for="loginPassword">비밀번호</label>
+          <div class="input-with-icon">
+            <input type="password" id="loginPassword" placeholder="비밀번호 입력" autocomplete="current-password" />
+            <button type="button" id="toggleLoginPwd" class="eye-btn" aria-label="비밀번호 보기 전환">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div id="loginError" class="login-error" style="display:none;"></div>
+
+        <button type="submit" id="loginSubmitBtn" class="btn btn-primary btn-full">
+          <i class="fas fa-right-to-bracket"></i> 로그인
+        </button>
+      </form>
+
+      <a href="index.html" class="back-link">← 홈으로 돌아가기</a>
+    </div>
+  </div>
+
+  <div id="adminApp" style="display:none;">
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="index.html" class="back-btn"><i class="fas fa-arrow-left"></i> 홈</a>
+        <div class="logo">
+          <i class="fas fa-user-shield"></i>
+          <span>관리자 모드</span>
+        </div>
+        <div class="admin-header-actions">
+          <span id="adminEmailBadge" class="admin-user-badge"></span>
+          <button class="btn btn-sm btn-outline" id="logoutBtn">
+            <i class="fas fa-right-from-bracket"></i><span class="hide-xs"> 로그아웃</span>
           </button>
         </div>
       </div>
-      <div id="loginError" class="login-error" style="display:none;">
-        <i class="fas fa-circle-exclamation"></i> 비밀번호가 틀렸습니다.
+    </header>
+
+    <main class="page-main admin-main">
+      <div class="tab-nav">
+        <button class="tab-btn active" data-tab="board">
+          <i class="fas fa-list-ul"></i> 모임 게시판
+        </button>
+        <button class="tab-btn" data-tab="new">
+          <i class="fas fa-plus-circle"></i> 모임 개설
+        </button>
+        <button class="tab-btn" data-tab="guide">
+          <i class="fas fa-book-open"></i> 사용 안내
+        </button>
       </div>
-      <button type="submit" class="btn btn-primary btn-full">
-        <i class="fas fa-right-to-bracket"></i> 로그인
-      </button>
-    </form>
-    <a href="index.html" class="back-link">← 홈으로 돌아가기</a>
+
+      <section id="tab-board" class="tab-content active">
+        <div class="board-toolbar">
+          <div class="filter-tabs">
+            <button class="filter-btn active" data-filter="all">전체</button>
+            <button class="filter-btn" data-filter="모집중">모집중</button>
+            <button class="filter-btn" data-filter="마감">마감</button>
+          </div>
+          <button class="btn btn-sm btn-primary" id="goNewMeetingBtn">
+            <i class="fas fa-plus"></i> 새 모임
+          </button>
+        </div>
+
+        <div id="boardList" class="board-list">
+          <div class="loading-state"><i class="fas fa-spinner fa-spin"></i><p>모임을 불러오는 중입니다...</p></div>
+        </div>
+
+        <div id="memberPanel" class="member-panel" style="display:none;">
+          <div class="member-panel-header">
+            <h3 id="memberPanelTitle">참석자 명단</h3>
+            <button class="icon-btn" id="closeMemberPanelBtn"><i class="fas fa-xmark"></i></button>
+          </div>
+
+          <div class="member-panel-toolbar">
+            <div class="search-box">
+              <i class="fas fa-magnifying-glass"></i>
+              <input type="text" id="memberSearch" placeholder="이름 · 전화번호 검색" />
+            </div>
+            <div class="panel-actions">
+              <button class="btn btn-sm btn-outline-green" id="printMembersBtn">
+                <i class="fas fa-print"></i> 인쇄
+              </button>
+              <button class="btn btn-sm btn-outline-green" id="downloadWordBtn">
+                <i class="fas fa-file-word"></i> 워드 저장
+              </button>
+            </div>
+          </div>
+
+          <div id="memberStat" class="member-stat"></div>
+          <div class="table-wrap">
+            <table id="memberTable">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>이름</th>
+                  <th>전화번호</th>
+                  <th>계좌번호</th>
+                  <th>신청일시</th>
+                  <th class="no-print">삭제</th>
+                </tr>
+              </thead>
+              <tbody id="memberTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-new" class="tab-content">
+        <div class="section-block">
+          <h2 class="section-title"><i class="fas fa-plus-circle"></i> 새 걷기모임 개설</h2>
+          <form id="newMeetingForm" class="apply-form" novalidate>
+            <div class="form-group">
+              <label for="mTitle">모임 주제 <span class="required">*</span></label>
+              <input type="text" id="mTitle" maxlength="60" placeholder="예: 한강 저녁 걷기모임" />
+            </div>
+
+            <div class="form-row form-row-3">
+              <div class="form-group">
+                <label for="mDate">날짜 <span class="required">*</span></label>
+                <input type="date" id="mDate" />
+              </div>
+              <div class="form-group">
+                <label for="mTime">시간 <span class="required">*</span></label>
+                <input type="time" id="mTime" />
+              </div>
+              <div class="form-group">
+                <label for="mMax">최대 인원 <span class="required">*</span></label>
+                <input type="number" id="mMax" min="1" max="500" placeholder="20" inputmode="numeric" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="mLocation">장소</label>
+              <input type="text" id="mLocation" maxlength="80" placeholder="예: 반포한강공원 달빛광장 앞" />
+            </div>
+
+            <div class="form-group">
+              <label for="mDesc">모임 설명</label>
+              <textarea id="mDesc" rows="5" placeholder="코스, 준비물, 회비, 주의사항 등을 입력해 주세요."></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" id="cancelNewMeetingBtn">취소</button>
+              <button type="submit" class="btn btn-primary" id="newMeetingSubmitBtn">
+                <i class="fas fa-circle-check"></i> 모임 개설
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section id="tab-guide" class="tab-content">
+        <div class="guide-wrap">
+          <div class="guide-card">
+            <h3><span class="step-badge">1</span> 관리자 로그인</h3>
+            <ul>
+              <li>관리자 페이지는 메인 화면에 노출되지 않습니다.</li>
+              <li>운영자는 <code>/admin.html</code> 주소로 직접 접속합니다.</li>
+              <li>Supabase Authentication에 생성한 관리자 이메일과 비밀번호로 로그인합니다.</li>
+            </ul>
+          </div>
+
+          <div class="guide-card">
+            <h3><span class="step-badge">2</span> 새 걷기모임 개설</h3>
+            <ul>
+              <li><strong>모임 개설</strong> 탭에서 제목, 날짜, 시간, 최대 인원을 입력합니다.</li>
+              <li>장소와 설명을 함께 적으면 참가자 페이지에서 더 친절하게 안내할 수 있습니다.</li>
+              <li>개설된 모임은 참가자 페이지에 즉시 반영됩니다.</li>
+            </ul>
+          </div>
+
+          <div class="guide-card">
+            <h3><span class="step-badge">3</span> 참가자 명단 관리</h3>
+            <ul>
+              <li>모임 게시판에서 원하는 카드의 <kbd>명단 보기</kbd>를 누르면 참가자 목록이 열립니다.</li>
+              <li>참가자 명단은 이름 기준 <strong>가나다순</strong>으로 정렬됩니다.</li>
+              <li>검색창에서 이름이나 전화번호를 입력해 빠르게 찾을 수 있습니다.</li>
+            </ul>
+          </div>
+
+          <div class="guide-card">
+            <h3><span class="step-badge">4</span> 인쇄 및 워드 저장</h3>
+            <ul>
+              <li><kbd>인쇄</kbd> 버튼은 A4 용지 기준 미리보기를 엽니다.</li>
+              <li><kbd>워드 저장</kbd> 버튼은 <code>.doc</code> 파일로 참가자 명단을 저장합니다.</li>
+              <li>인쇄 시 삭제 버튼 열은 자동으로 숨겨집니다.</li>
+            </ul>
+          </div>
+
+          <div class="guide-card warning-card">
+            <h3><i class="fas fa-triangle-exclamation"></i> 운영 주의사항</h3>
+            <ul>
+              <li>전화번호와 계좌번호는 개인정보입니다. 운영 목적 외 사용하지 마세요.</li>
+              <li>관리자 계정 비밀번호는 Supabase Authentication에서 별도로 안전하게 관리하세요.</li>
+              <li>권한 정책(RLS)을 README 안내대로 정확히 설정해야 사이트가 정상 동작합니다.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
-</div>
 
-<!-- ─── 관리자 본문 ──────────────────────────────────────── -->
-<div id="adminApp" style="display:none;">
-
-  <!-- 헤더 -->
-  <header class="site-header">
-    <div class="header-inner">
-      <a href="index.html" class="back-btn"><i class="fas fa-arrow-left"></i> 홈</a>
-      <div class="logo">
-        <i class="fas fa-user-shield"></i>
-        <span>관리자 모드</span>
+  <div id="deleteModal" class="modal-bg" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fas fa-trash"></i> 삭제 확인</h3>
       </div>
-      <div class="admin-header-actions">
-        <button class="btn btn-sm btn-outline" onclick="openChangePwd()">
-          <i class="fas fa-key"></i><span class="hide-xs"> 비밀번호 변경</span>
-        </button>
-        <button class="btn btn-sm btn-outline" onclick="doLogout()">
-          <i class="fas fa-right-from-bracket"></i><span class="hide-xs"> 로그아웃</span>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <main class="page-main admin-main">
-
-    <!-- 탭 네비게이션 -->
-    <div class="tab-nav">
-      <button class="tab-btn active" onclick="switchTab('board')">
-        <i class="fas fa-list-ul"></i> 모임 게시판
-      </button>
-      <button class="tab-btn" onclick="switchTab('new')">
-        <i class="fas fa-plus-circle"></i> 모임 개설
-      </button>
-      <button class="tab-btn" onclick="switchTab('guide')">
-        <i class="fas fa-book-open"></i> 사용 안내
-      </button>
-    </div>
-
-    <!-- ── 탭1: 모임 게시판 ── -->
-    <div id="tab-board" class="tab-content active">
-      <div class="board-toolbar">
-        <div class="filter-tabs">
-          <button class="filter-btn active" onclick="filterMeetings('all', this)">전체</button>
-          <button class="filter-btn" onclick="filterMeetings('모집중', this)">모집중</button>
-          <button class="filter-btn" onclick="filterMeetings('마감', this)">마감</button>
-        </div>
-        <button class="btn btn-sm btn-primary" onclick="switchTab('new')">
-          <i class="fas fa-plus"></i> 새 모임
-        </button>
-      </div>
-
-      <div id="boardList" class="board-list">
-        <div class="loading-state"><i class="fas fa-spinner fa-spin"></i><p>불러오는 중...</p></div>
-      </div>
-
-      <!-- 참석자 명단 패널 -->
-      <div id="memberPanel" class="member-panel" style="display:none;">
-        <div class="member-panel-header">
-          <h3 id="memberPanelTitle">참석자 명단</h3>
-          <button class="icon-btn" onclick="closeMemberPanel()"><i class="fas fa-xmark"></i></button>
-        </div>
-        <div class="member-panel-toolbar">
-          <div class="search-box">
-            <i class="fas fa-magnifying-glass"></i>
-            <input type="text" id="memberSearch" placeholder="이름·전화번호 검색" oninput="filterMembers()" />
-          </div>
-          <div class="panel-actions">
-            <button class="btn btn-sm btn-outline" onclick="printMembers()">
-              <i class="fas fa-print"></i> 인쇄
-            </button>
-            <button class="btn btn-sm btn-outline" onclick="downloadWord()">
-              <i class="fas fa-file-word"></i> 워드 저장
-            </button>
-          </div>
-        </div>
-        <div id="memberStat" class="member-stat"></div>
-        <div class="table-wrap">
-          <table id="memberTable">
-            <thead>
-              <tr>
-                <th>No.</th>
-                <th>이름</th>
-                <th>전화번호</th>
-                <th>계좌번호</th>
-                <th>신청일시</th>
-                <th class="no-print">삭제</th>
-              </tr>
-            </thead>
-            <tbody id="memberTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── 탭2: 모임 개설 ── -->
-    <div id="tab-new" class="tab-content">
-      <div class="section-block">
-        <h2 class="section-title"><i class="fas fa-plus-circle"></i> 새 모임 개설</h2>
-        <form id="newMeetingForm" class="apply-form" novalidate>
-          <div class="form-group">
-            <label>모임 주제 <span class="required">*</span></label>
-            <input type="text" id="mTitle" placeholder="예: 선정릉 걷기 모임 (4월)" maxlength="60" />
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>날짜 <span class="required">*</span></label>
-              <input type="date" id="mDate" />
-            </div>
-            <div class="form-group">
-              <label>최대 인원 <span class="required">*</span></label>
-              <input type="number" id="mMax" placeholder="20" min="1" max="500" inputmode="numeric" />
-            </div>
-          </div>
-          <div class="form-group">
-            <label>장소</label>
-            <input type="text" id="mLocation" placeholder="예: 선정릉 정문 집합" maxlength="80" />
-          </div>
-          <div class="form-group">
-            <label>모임 설명</label>
-            <textarea id="mDesc" rows="4" placeholder="모임에 대한 상세 내용을 입력해 주세요.&#10;(코스, 준비물, 참가비 등)"></textarea>
-          </div>
-          <div class="form-actions">
-            <button type="button" class="btn btn-secondary" onclick="switchTab('board')">취소</button>
-            <button type="submit" class="btn btn-primary">
-              <i class="fas fa-circle-check"></i> 모임 개설
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- ── 탭3: 사용 안내 ── -->
-    <div id="tab-guide" class="tab-content">
-      <div class="guide-wrap">
-        <h2 class="section-title"><i class="fas fa-book-open"></i> 관리자 사용 안내서</h2>
-
-        <div class="guide-card">
-          <h3><span class="step-badge">1</span> 첫 로그인 & 비밀번호 변경</h3>
-          <ul>
-            <li>초기 비밀번호는 <strong>0000</strong> 입니다.</li>
-            <li>처음 로그인 후 반드시 <strong>비밀번호 변경</strong>을 해주세요.</li>
-            <li>상단 우측 <kbd>비밀번호 변경</kbd> 버튼 클릭 → 현재 비밀번호 입력 → 새 비밀번호 입력(4자리 이상) → 확인.</li>
-            <li>⚠️ 비밀번호는 브라우저 저장소에 보관됩니다. 같은 기기·브라우저에서만 유효합니다.</li>
-          </ul>
-        </div>
-
-        <div class="guide-card">
-          <h3><span class="step-badge">2</span> 모임 개설 방법</h3>
-          <ul>
-            <li><strong>모임 개설</strong> 탭을 클릭합니다.</li>
-            <li>모임 주제, 날짜, 최대 인원(필수), 장소, 설명을 입력합니다.</li>
-            <li><kbd>모임 개설</kbd> 버튼 클릭 → 게시판에 즉시 등록됩니다.</li>
-            <li>참가자는 <strong>참가자 신청 페이지(user.html)</strong>에서 모임을 보고 신청합니다.</li>
-          </ul>
-        </div>
-
-        <div class="guide-card">
-          <h3><span class="step-badge">3</span> 참석자 명단 확인</h3>
-          <ul>
-            <li><strong>모임 게시판</strong> 탭에서 원하는 모임 카드를 클릭합니다.</li>
-            <li>하단에 <strong>참석자 명단 패널</strong>이 열립니다.</li>
-            <li>명단은 <strong>가나다순(이름순)</strong>으로 자동 정렬됩니다.</li>
-            <li>이름이나 전화번호로 실시간 검색이 가능합니다.</li>
-          </ul>
-        </div>
-
-        <div class="guide-card">
-          <h3><span class="step-badge">4</span> 모임 상태 변경 (모집중 ↔ 마감)</h3>
-          <ul>
-            <li>모임 카드에서 <kbd>마감 처리</kbd> 버튼을 클릭하면 더 이상 신청을 받지 않습니다.</li>
-            <li><kbd>모집 재개</kbd>를 클릭하면 다시 모집 중 상태로 돌아옵니다.</li>
-            <li>최대 인원이 다 차면 참가자 페이지에서 자동으로 마감 표시됩니다.</li>
-          </ul>
-        </div>
-
-        <div class="guide-card">
-          <h3><span class="step-badge">5</span> 인쇄 및 워드 저장</h3>
-          <ul>
-            <li>참석자 명단 패널에서 <kbd><i class="fas fa-print"></i> 인쇄</kbd> 버튼 → A4 최적화 인쇄 창이 열립니다.</li>
-            <li><kbd><i class="fas fa-file-word"></i> 워드 저장</kbd> 버튼 → <code>.doc</code> 파일이 컴퓨터에 저장됩니다.</li>
-            <li>인쇄 시 삭제 버튼 열은 자동으로 숨겨집니다.</li>
-          </ul>
-        </div>
-
-        <div class="guide-card">
-          <h3><span class="step-badge">6</span> 참가자 삭제</h3>
-          <ul>
-            <li>참석자 명단 표에서 각 행의 <kbd>삭제</kbd> 버튼 클릭 → 확인 후 삭제됩니다.</li>
-            <li>삭제 후에는 복구가 불가능합니다. 신중히 사용해 주세요.</li>
-          </ul>
-        </div>
-
-        <div class="guide-card">
-          <h3><span class="step-badge">7</span> 참가자에게 안내하는 방법</h3>
-          <ul>
-            <li>이 사이트를 배포(Publish) 한 뒤 나오는 URL을 참가자에게 공유합니다.</li>
-            <li>참가자는 <strong>홈 화면 → 참가자 신청</strong>을 눌러 신청합니다.</li>
-            <li>관리자 URL(<code>/admin.html</code>)은 외부에 공유하지 않도록 주의해 주세요.</li>
-          </ul>
-        </div>
-
-        <div class="guide-card warning-card">
-          <h3><i class="fas fa-triangle-exclamation"></i> 주의 사항</h3>
-          <ul>
-            <li>이름·전화번호·계좌번호는 개인정보입니다. 수집 목적 외 사용하지 마세요.</li>
-            <li>비밀번호 분실 시: 브라우저 개발자 도구에서 localStorage의 <code>adminPassword</code> 키를 삭제하면 초기화(0000)됩니다.</li>
-            <li>데이터는 서버에 저장되므로 사이트 배포 후에도 유지됩니다.</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-  </main>
-</div><!-- /adminApp -->
-
-<!-- 비밀번호 변경 모달 -->
-<div id="changePwdModal" class="modal-bg" style="display:none;">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3><i class="fas fa-key"></i> 비밀번호 변경</h3>
-      <button class="icon-btn" onclick="closeChangePwd()"><i class="fas fa-xmark"></i></button>
-    </div>
-    <form onsubmit="doChangePwd();return false;">
-      <input type="text" name="username" value="admin" autocomplete="username" style="display:none" aria-hidden="true" />
-      <div class="form-group">
-        <label>현재 비밀번호</label>
-        <input type="password" id="curPwd" placeholder="현재 비밀번호 입력" autocomplete="current-password" />
-      </div>
-      <div class="form-group">
-        <label>새 비밀번호 <span class="field-hint">(4자리 이상)</span></label>
-        <input type="password" id="newPwd" placeholder="새 비밀번호 입력" autocomplete="new-password" />
-      </div>
-      <div class="form-group">
-        <label>새 비밀번호 확인</label>
-        <input type="password" id="newPwd2" placeholder="새 비밀번호 재입력" autocomplete="new-password" />
-      </div>
-      <div id="changePwdError" class="login-error" style="display:none;"></div>
+      <p id="deleteModalMsg">삭제하시겠습니까?</p>
       <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeChangePwd()">취소</button>
-        <button type="submit" class="btn btn-primary">변경 완료</button>
+        <button type="button" class="btn btn-secondary" id="cancelDeleteBtn">취소</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">삭제</button>
       </div>
-    </form>
-  </div>
-</div>
-
-<!-- 삭제 확인 모달 -->
-<div id="deleteModal" class="modal-bg" style="display:none;">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3><i class="fas fa-trash"></i> 참가자 삭제</h3>
-    </div>
-    <p id="deleteModalMsg">이 참가자를 삭제하시겠습니까?</p>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeDeleteModal()">취소</button>
-      <button class="btn btn-danger" onclick="confirmDelete()">삭제</button>
     </div>
   </div>
-</div>
 
-<footer class="site-footer">
-  <p>관리자 전용 페이지 | 모임 모집 시스템 &copy; 2026</p>
-</footer>
+  <footer class="site-footer">
+    <p>관리자 전용 페이지 · 걷기모임 모집 시스템</p>
+  </footer>
 
-<script>
-// ─── 비밀번호 관리 ────────────────────────────────────────────
-const DEFAULT_PWD = '0000';
-function getStoredPwd() { return localStorage.getItem('adminPassword') || DEFAULT_PWD; }
-function setStoredPwd(p) { localStorage.setItem('adminPassword', p); }
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-function togglePwd(id, btn) {
-  const el = document.getElementById(id);
-  if (el.type === 'password') { el.type = 'text'; btn.innerHTML = '<i class="fas fa-eye-slash"></i>'; }
-  else { el.type = 'password'; btn.innerHTML = '<i class="fas fa-eye"></i>'; }
-}
+    // 반드시 본인 Supabase 값으로 바꿔 주세요.
+    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_OR_PUBLISHABLE_KEY';
 
-function doLogin() {
-  const pwd = document.getElementById('loginPwd').value;
-  if (pwd === getStoredPwd()) {
-    document.getElementById('loginOverlay').style.display = 'none';
-    document.getElementById('adminApp').style.display = 'block';
-    loadBoard();
-  } else {
-    document.getElementById('loginError').style.display = 'flex';
-    document.getElementById('loginPwd').value = '';
-    document.getElementById('loginPwd').focus();
-  }
-}
+    const configAlert = document.getElementById('configAlert');
+    const loginOverlay = document.getElementById('loginOverlay');
+    const adminApp = document.getElementById('adminApp');
+    const loginError = document.getElementById('loginError');
+    const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+    const boardListEl = document.getElementById('boardList');
+    const memberPanelEl = document.getElementById('memberPanel');
+    const memberPanelTitleEl = document.getElementById('memberPanelTitle');
+    const memberStatEl = document.getElementById('memberStat');
+    const memberTableBodyEl = document.getElementById('memberTableBody');
+    const adminEmailBadgeEl = document.getElementById('adminEmailBadge');
+    const memberSearchEl = document.getElementById('memberSearch');
 
-function doLogout() {
-  document.getElementById('adminApp').style.display = 'none';
-  document.getElementById('loginOverlay').style.display = 'flex';
-  document.getElementById('loginPwd').value = '';
-  document.getElementById('loginError').style.display = 'none';
-}
+    let supabase = null;
+    let currentUser = null;
+    let allMeetings = [];
+    let currentFilter = 'all';
+    let allMembers = [];
+    let panelMeetingId = '';
+    let panelMeetingTitle = '';
+    let pendingDelete = null;
 
-function openChangePwd() {
-  document.getElementById('curPwd').value = '';
-  document.getElementById('newPwd').value = '';
-  document.getElementById('newPwd2').value = '';
-  document.getElementById('changePwdError').style.display = 'none';
-  document.getElementById('changePwdModal').style.display = 'flex';
-}
+    function isConfigured() {
+      return !SUPABASE_URL.includes('YOUR_PROJECT') && !SUPABASE_ANON_KEY.includes('YOUR_SUPABASE');
+    }
 
-function closeChangePwd() { document.getElementById('changePwdModal').style.display = 'none'; }
+    function showConfigAlert() {
+      configAlert.style.display = 'flex';
+      configAlert.innerHTML = '<i class="fas fa-triangle-exclamation"></i><div><strong>Supabase 설정이 필요합니다.</strong><br />admin.html 상단의 <code>SUPABASE_URL</code>, <code>SUPABASE_ANON_KEY</code>를 본인 프로젝트 값으로 바꿔 주세요.</div>';
+    }
 
-function doChangePwd() {
-  const cur  = document.getElementById('curPwd').value;
-  const np   = document.getElementById('newPwd').value;
-  const np2  = document.getElementById('newPwd2').value;
-  const errEl = document.getElementById('changePwdError');
+    function escapeHtml(value = '') {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
-  if (cur !== getStoredPwd()) {
-    errEl.innerHTML = '<i class="fas fa-circle-exclamation"></i> 현재 비밀번호가 틀렸습니다.';
-    errEl.style.display = 'flex'; return;
-  }
-  if (np.length < 4) {
-    errEl.innerHTML = '<i class="fas fa-circle-exclamation"></i> 비밀번호는 4자리 이상이어야 합니다.';
-    errEl.style.display = 'flex'; return;
-  }
-  if (np !== np2) {
-    errEl.innerHTML = '<i class="fas fa-circle-exclamation"></i> 새 비밀번호가 일치하지 않습니다.';
-    errEl.style.display = 'flex'; return;
-  }
-  setStoredPwd(np);
-  closeChangePwd();
-  alert('비밀번호가 변경되었습니다. 다음 로그인부터 새 비밀번호를 사용해 주세요.');
-}
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const date = new Date(`${dateStr}T00:00:00`);
+      return date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'short'
+      });
+    }
 
-// ─── 탭 전환 ──────────────────────────────────────────────────
-function switchTab(name) {
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-  document.getElementById('tab-'+name).classList.add('active');
-  const idx = {'board':0,'new':1,'guide':2}[name];
-  document.querySelectorAll('.tab-btn')[idx].classList.add('active');
-  if (name === 'board') loadBoard();
-}
+    function formatTime(timeStr) {
+      if (!timeStr) return '';
+      return timeStr.slice(0, 5);
+    }
 
-// ─── 유틸 ─────────────────────────────────────────────────────
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (isNaN(d)) return dateStr;
-  return d.toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric', weekday:'short' });
-}
+    function formatDateTime(timestamp) {
+      if (!timestamp) return '';
+      return new Date(timestamp).toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
 
-function formatDateTime(ts) {
-  if (!ts) return '';
-  const d = new Date(typeof ts === 'number' ? ts : ts);
-  return d.toLocaleString('ko-KR', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-}
+    function formatMeetingDateTime(meeting) {
+      return `${formatDate(meeting.meeting_date)} · ${formatTime(meeting.meeting_time)}`;
+    }
 
-// ─── 게시판 ───────────────────────────────────────────────────
-let allMeetings = [];
-let currentFilter = 'all';
+    function setLoginError(message = '') {
+      if (!message) {
+        loginError.style.display = 'none';
+        loginError.innerHTML = '';
+        return;
+      }
+      loginError.style.display = 'flex';
+      loginError.innerHTML = `<i class="fas fa-circle-exclamation"></i> ${escapeHtml(message)}`;
+    }
 
-async function loadBoard() {
-  const listEl = document.getElementById('boardList');
-  listEl.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i><p>불러오는 중...</p></div>';
-  try {
-    const res = await fetch('tables/meetings?limit=200&sort=createdAt');
-    const data = await res.json();
-    allMeetings = (data.data || []).sort((a,b) => (b.created_at||0) - (a.created_at||0));
-    renderBoard();
-  } catch(e) {
-    listEl.innerHTML = '<div class="error-state"><i class="fas fa-triangle-exclamation"></i><p>불러오기 실패</p></div>';
-  }
-}
+    function showLogin() {
+      loginOverlay.style.display = 'flex';
+      adminApp.style.display = 'none';
+      currentUser = null;
+      adminEmailBadgeEl.textContent = '';
+      boardListEl.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i><p>로그인 후 이용해 주세요.</p></div>';
+    }
 
-function filterMeetings(filter, btn) {
-  currentFilter = filter;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderBoard();
-}
+    function showAdmin(user) {
+      currentUser = user;
+      adminEmailBadgeEl.textContent = user.email || '관리자';
+      loginOverlay.style.display = 'none';
+      adminApp.style.display = 'block';
+      loadBoard();
+    }
 
-async function renderBoard() {
-  const listEl = document.getElementById('boardList');
-  const filtered = currentFilter === 'all' ? allMeetings : allMeetings.filter(m => m.status === currentFilter);
+    async function restoreSession() {
+      const { data, error } = await supabase.auth.getSession();
+      if (error || !data.session) {
+        showLogin();
+        return;
+      }
+      showAdmin(data.session.user);
+    }
 
-  if (filtered.length === 0) {
-    listEl.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>해당하는 모임이 없습니다.</p></div>';
-    return;
-  }
+    async function doLogin(event) {
+      event.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
 
-  // 참가자 수 일괄 조회
-  const pRes = await fetch('tables/participants?limit=5000');
-  const pData = await pRes.json();
-  const participants = pData.data || [];
+      if (!email || !password) {
+        setLoginError('이메일과 비밀번호를 모두 입력해 주세요.');
+        return;
+      }
 
-  listEl.innerHTML = '';
-  for (const m of filtered) {
-    const count = participants.filter(p => p.meetingId === m.id).length;
-    const full  = count >= m.maxParticipants;
-    const card  = document.createElement('div');
-    card.className = `board-card ${m.status === '마감' ? 'board-card-closed' : ''}`;
-    card.innerHTML = `
-      <div class="board-card-header" onclick="openMemberPanel('${m.id}','${m.title.replace(/'/g,"\\'")}')">
-        <div>
-          <h3>${m.title}</h3>
-          <div class="board-card-meta">
-            <span><i class="fas fa-calendar-day"></i> ${formatDate(m.date)}</span>
-            <span><i class="fas fa-location-dot"></i> ${m.location||'미정'}</span>
-            <span><i class="fas fa-users"></i> <strong>${count}명</strong> / ${m.maxParticipants}명</span>
+      loginSubmitBtn.disabled = true;
+      loginSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 로그인 중...';
+      setLoginError('');
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+      loginSubmitBtn.disabled = false;
+      loginSubmitBtn.innerHTML = '<i class="fas fa-right-to-bracket"></i> 로그인';
+
+      if (error) {
+        setLoginError(error.message || '로그인에 실패했습니다.');
+        return;
+      }
+
+      showAdmin(data.user);
+    }
+
+    async function doLogout() {
+      await supabase.auth.signOut();
+      showLogin();
+    }
+
+    async function loadBoard() {
+      if (!currentUser) return;
+      boardListEl.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i><p>모임을 불러오는 중입니다...</p></div>';
+
+      const { data, error } = await supabase
+        .from('meetings')
+        .select('*')
+        .order('meeting_date', { ascending: true })
+        .order('meeting_time', { ascending: true });
+
+      if (error) {
+        boardListEl.innerHTML = '<div class="error-state"><i class="fas fa-triangle-exclamation"></i><p>모임을 불러오지 못했습니다.<br />Supabase Auth 또는 RLS 정책을 확인해 주세요.</p></div>';
+        return;
+      }
+
+      allMeetings = data || [];
+      renderBoard();
+    }
+
+    function renderBoard() {
+      const meetings = currentFilter === 'all'
+        ? allMeetings
+        : allMeetings.filter((meeting) => meeting.status === currentFilter);
+
+      if (!meetings.length) {
+        boardListEl.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>해당하는 모임이 없습니다.</p></div>';
+        return;
+      }
+
+      boardListEl.innerHTML = meetings.map((meeting) => `
+        <article class="board-card ${meeting.status === '마감' ? 'board-card-closed' : ''}">
+          <div class="board-card-header" data-open-id="${meeting.id}">
+            <div>
+              <h3>${escapeHtml(meeting.title)}</h3>
+              <div class="board-card-meta">
+                <span><i class="fas fa-calendar-day"></i> ${escapeHtml(formatMeetingDateTime(meeting))}</span>
+                <span><i class="fas fa-location-dot"></i> ${escapeHtml(meeting.location || '장소 미정')}</span>
+                <span><i class="fas fa-users"></i> <strong>${meeting.current_participants}명</strong> / ${meeting.max_participants}명</span>
+              </div>
+            </div>
+            <span class="badge ${meeting.status === '마감' ? 'badge-full' : 'badge-open'}">${meeting.status}</span>
           </div>
-        </div>
-        <span class="badge ${m.status==='마감'?'badge-full':'badge-open'}">${m.status||'모집중'}</span>
-      </div>
-      <div class="board-card-actions">
-        <button class="btn btn-sm btn-outline" onclick="openMemberPanel('${m.id}','${m.title.replace(/'/g,"\\'")}')">
-          <i class="fas fa-users"></i> 명단 보기 (${count}명)
-        </button>
-        <button class="btn btn-sm ${m.status==='마감'?'btn-secondary':'btn-warning'}"
-          onclick="toggleStatus('${m.id}','${m.status||'모집중'}')">
-          ${m.status==='마감'
-            ? '<i class="fas fa-rotate-left"></i> 모집 재개'
-            : '<i class="fas fa-lock"></i> 마감 처리'}
-        </button>
-        <button class="btn btn-sm btn-danger" onclick="deleteMeeting('${m.id}','${m.title.replace(/'/g,"\\'")}')">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>
-    `;
-    listEl.appendChild(card);
-  }
-}
+          <div class="board-card-actions">
+            <button class="btn btn-sm btn-outline-green" data-open-id="${meeting.id}">
+              <i class="fas fa-users"></i> 명단 보기 (${meeting.current_participants}명)
+            </button>
+            <button class="btn btn-sm ${meeting.status === '마감' ? 'btn-secondary' : 'btn-warning'}" data-status-id="${meeting.id}">
+              ${meeting.status === '마감' ? '<i class="fas fa-rotate-left"></i> 모집 재개' : '<i class="fas fa-lock"></i> 마감 처리'}
+            </button>
+            <button class="btn btn-sm btn-danger" data-delete-meeting-id="${meeting.id}">
+              <i class="fas fa-trash"></i> 삭제
+            </button>
+          </div>
+        </article>`).join('');
 
-// ─── 모임 상태 변경 ───────────────────────────────────────────
-async function toggleStatus(meetingId, currentStatus) {
-  const newStatus = currentStatus === '마감' ? '모집중' : '마감';
-  await fetch(`tables/meetings/${meetingId}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: newStatus })
-  });
-  await loadBoard();
-}
+      boardListEl.querySelectorAll('[data-open-id]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const meeting = allMeetings.find((item) => item.id === button.dataset.openId);
+          if (meeting) openMemberPanel(meeting);
+        });
+      });
 
-// ─── 모임 삭제 ────────────────────────────────────────────────
-async function deleteMeeting(meetingId, title) {
-  if (!confirm(`"${title}" 모임을 삭제하시겠습니까?\n참석자 명단도 함께 삭제됩니다.`)) return;
-  await fetch(`tables/meetings/${meetingId}`, { method: 'DELETE' });
-  // 참가자도 삭제
-  const pRes = await fetch('tables/participants?limit=5000');
-  const pData = await pRes.json();
-  const toDelete = (pData.data||[]).filter(p => p.meetingId === meetingId);
-  for (const p of toDelete) {
-    await fetch(`tables/participants/${p.id}`, { method: 'DELETE' });
-  }
-  closeMemberPanel();
-  await loadBoard();
-}
+      boardListEl.querySelectorAll('[data-status-id]').forEach((button) => {
+        button.addEventListener('click', () => toggleStatus(button.dataset.statusId));
+      });
 
-// ─── 명단 패널 ────────────────────────────────────────────────
-let panelMeetingId = '';
-let panelMeetingTitle = '';
-let allMembers = [];
+      boardListEl.querySelectorAll('[data-delete-meeting-id]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const meeting = allMeetings.find((item) => item.id === button.dataset.deleteMeetingId);
+          if (meeting) askDelete({ type: 'meeting', id: meeting.id, title: meeting.title });
+        });
+      });
+    }
 
-async function openMemberPanel(meetingId, title) {
-  panelMeetingId    = meetingId;
-  panelMeetingTitle = title;
-  document.getElementById('memberPanelTitle').textContent = title + ' · 참석자 명단';
-  document.getElementById('memberSearch').value = '';
-  document.getElementById('memberPanel').style.display = 'block';
-  document.getElementById('memberPanel').scrollIntoView({ behavior:'smooth', block:'start' });
-  await refreshMembers();
-}
+    async function toggleStatus(meetingId) {
+      const meeting = allMeetings.find((item) => item.id === meetingId);
+      if (!meeting) return;
+      const newStatus = meeting.status === '마감' ? '모집중' : '마감';
+      const { error } = await supabase.from('meetings').update({ status: newStatus }).eq('id', meetingId);
+      if (error) {
+        alert(error.message || '상태 변경 중 오류가 발생했습니다.');
+        return;
+      }
+      await loadBoard();
+      if (panelMeetingId === meetingId) {
+        const refreshed = allMeetings.find((item) => item.id === meetingId);
+        if (refreshed) memberPanelTitleEl.textContent = `${refreshed.title} · 참석자 명단`;
+      }
+    }
 
-function closeMemberPanel() {
-  document.getElementById('memberPanel').style.display = 'none';
-  panelMeetingId = '';
-}
+    async function openMemberPanel(meeting) {
+      panelMeetingId = meeting.id;
+      panelMeetingTitle = meeting.title;
+      memberPanelTitleEl.textContent = `${meeting.title} · 참석자 명단`;
+      memberSearchEl.value = '';
+      memberPanelEl.style.display = 'block';
+      memberPanelEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      await refreshMembers();
+    }
 
-async function refreshMembers() {
-  const res   = await fetch('tables/participants?limit=5000');
-  const data  = await res.json();
-  allMembers  = (data.data||[])
-    .filter(p => p.meetingId === panelMeetingId)
-    .sort((a,b) => (a.name||'').localeCompare(b.name||'', 'ko'));
-  filterMembers();
-}
+    function closeMemberPanel() {
+      memberPanelEl.style.display = 'none';
+      panelMeetingId = '';
+      panelMeetingTitle = '';
+      allMembers = [];
+      memberTableBodyEl.innerHTML = '';
+      memberStatEl.textContent = '';
+    }
 
-function filterMembers() {
-  const q   = (document.getElementById('memberSearch').value||'').trim().toLowerCase();
-  const rows = q
-    ? allMembers.filter(p =>
-        (p.name||'').toLowerCase().includes(q) ||
-        (p.phone||'').includes(q))
-    : allMembers;
+    async function refreshMembers() {
+      if (!panelMeetingId) return;
 
-  const tbody = document.getElementById('memberTableBody');
-  const stat  = document.getElementById('memberStat');
-  stat.textContent = `총 ${allMembers.length}명 (검색 결과 ${rows.length}명)`;
+      const { data, error } = await supabase
+        .from('participants')
+        .select('*')
+        .eq('meeting_id', panelMeetingId)
+        .order('applied_at', { ascending: true });
 
-  if (rows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="empty-cell">참가자가 없습니다.</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = rows.map((p, i) => `
-    <tr>
-      <td>${i+1}</td>
-      <td>${p.name||''}</td>
-      <td>${p.phone||''}</td>
-      <td>${p.account||''}</td>
-      <td>${formatDateTime(p.appliedAt||p.created_at)}</td>
-      <td class="no-print">
-        <button class="btn btn-xs btn-danger" onclick="askDelete('${p.id}','${(p.name||'').replace(/'/g,"\\'")}')">삭제</button>
-      </td>
-    </tr>`).join('');
-}
+      if (error) {
+        memberTableBodyEl.innerHTML = `<tr><td colspan="6" class="empty-cell">명단을 불러오지 못했습니다.</td></tr>`;
+        return;
+      }
 
-// ─── 참가자 삭제 ──────────────────────────────────────────────
-let pendingDeleteId = '';
-function askDelete(id, name) {
-  pendingDeleteId = id;
-  document.getElementById('deleteModalMsg').textContent = `"${name}"님을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`;
-  document.getElementById('deleteModal').style.display = 'flex';
-}
-function closeDeleteModal() { document.getElementById('deleteModal').style.display='none'; pendingDeleteId=''; }
-async function confirmDelete() {
-  if (!pendingDeleteId) return;
-  await fetch(`tables/participants/${pendingDeleteId}`, { method:'DELETE' });
-  closeDeleteModal();
-  await refreshMembers();
-}
+      allMembers = (data || []).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+      filterMembers();
+    }
 
-// ─── 인쇄 ─────────────────────────────────────────────────────
-function printMembers() {
-  const rows = Array.from(document.querySelectorAll('#memberTableBody tr')).map(tr => {
-    const cells = tr.querySelectorAll('td');
-    return `<tr>
-      <td>${cells[0]?.textContent||''}</td>
-      <td>${cells[1]?.textContent||''}</td>
-      <td>${cells[2]?.textContent||''}</td>
-      <td>${cells[3]?.textContent||''}</td>
-      <td>${cells[4]?.textContent||''}</td>
-    </tr>`;
-  }).join('');
+    function filterMembers() {
+      const keyword = memberSearchEl.value.trim().toLowerCase();
+      const rows = keyword
+        ? allMembers.filter((member) =>
+            (member.name || '').toLowerCase().includes(keyword) ||
+            (member.phone || '').includes(keyword)
+          )
+        : allMembers;
 
-  const win = window.open('','_blank','width=800,height=700');
-  win.document.write(`<!DOCTYPE html><html lang="ko"><head>
-    <meta charset="UTF-8"/>
-    <title>${panelMeetingTitle} 명단</title>
-    <style>
-      body { font-family:'Noto Sans KR',sans-serif; padding:24px; font-size:12px; }
-      h2  { text-align:center; margin-bottom:4px; }
-      p   { text-align:center; color:#555; margin-bottom:16px; }
-      table { width:100%; border-collapse:collapse; }
-      th,td { border:1px solid #333; padding:6px 8px; text-align:left; }
-      th    { background:#2d6a4f; color:#fff; }
-      tr:nth-child(even) td { background:#f1f8f5; }
-      @page { size:A4; margin:16mm; }
-    </style>
-  </head><body>
-    <h2>${panelMeetingTitle}</h2>
-    <p>출력일: ${new Date().toLocaleDateString('ko-KR')} · 총 ${allMembers.length}명</p>
-    <table>
-      <thead><tr><th>No.</th><th>이름</th><th>전화번호</th><th>계좌번호</th><th>신청일시</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </body></html>`);
-  win.document.close();
-  win.print();
-}
+      memberStatEl.textContent = `총 ${allMembers.length}명 · 검색 결과 ${rows.length}명`;
 
-// ─── 워드 저장 ────────────────────────────────────────────────
-function downloadWord() {
-  const rows = allMembers.map((p, i) => `
-    <tr>
-      <td>${i+1}</td>
-      <td>${p.name||''}</td>
-      <td>${p.phone||''}</td>
-      <td>${p.account||''}</td>
-      <td>${formatDateTime(p.appliedAt||p.created_at)}</td>
-    </tr>`).join('');
+      if (!rows.length) {
+        memberTableBodyEl.innerHTML = `<tr><td colspan="6" class="empty-cell">참가자가 없습니다.</td></tr>`;
+        return;
+      }
 
-  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
-    xmlns:w="urn:schemas-microsoft-com:office:word"
-    xmlns="http://www.w3.org/TR/REC-html40">
-  <head><meta charset="UTF-8"/><title>${panelMeetingTitle}</title>
+      memberTableBodyEl.innerHTML = rows.map((member, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${escapeHtml(member.name || '')}</td>
+          <td>${escapeHtml(member.phone || '')}</td>
+          <td>${escapeHtml(member.account || '')}</td>
+          <td>${escapeHtml(formatDateTime(member.applied_at))}</td>
+          <td class="no-print">
+            <button class="btn btn-xs btn-danger" data-delete-member-id="${member.id}">삭제</button>
+          </td>
+        </tr>`).join('');
+
+      memberTableBodyEl.querySelectorAll('[data-delete-member-id]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const member = allMembers.find((item) => item.id === button.dataset.deleteMemberId);
+          if (member) askDelete({ type: 'member', id: member.id, name: member.name });
+        });
+      });
+    }
+
+    function askDelete(payload) {
+      pendingDelete = payload;
+      const messageEl = document.getElementById('deleteModalMsg');
+      if (payload.type === 'meeting') {
+        messageEl.textContent = `"${payload.title}" 모임을 삭제하시겠습니까? 참가자 명단도 함께 삭제됩니다.`;
+      } else {
+        messageEl.textContent = `"${payload.name}" 참가자를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`;
+      }
+      document.getElementById('deleteModal').style.display = 'flex';
+    }
+
+    function closeDeleteModal() {
+      pendingDelete = null;
+      document.getElementById('deleteModal').style.display = 'none';
+    }
+
+    async function confirmDelete() {
+      if (!pendingDelete) return;
+
+      if (pendingDelete.type === 'meeting') {
+        const { error } = await supabase.from('meetings').delete().eq('id', pendingDelete.id);
+        if (error) {
+          alert(error.message || '모임 삭제 중 오류가 발생했습니다.');
+          return;
+        }
+        closeMemberPanel();
+        closeDeleteModal();
+        await loadBoard();
+        return;
+      }
+
+      const { error } = await supabase.from('participants').delete().eq('id', pendingDelete.id);
+      if (error) {
+        alert(error.message || '참가자 삭제 중 오류가 발생했습니다.');
+        return;
+      }
+      closeDeleteModal();
+      await refreshMembers();
+      await loadBoard();
+    }
+
+    async function createMeeting(event) {
+      event.preventDefault();
+      const title = document.getElementById('mTitle').value.trim();
+      const meeting_date = document.getElementById('mDate').value;
+      const meeting_time = document.getElementById('mTime').value;
+      const max_participants = Number(document.getElementById('mMax').value);
+      const location = document.getElementById('mLocation').value.trim();
+      const description = document.getElementById('mDesc').value.trim();
+      const submitBtn = document.getElementById('newMeetingSubmitBtn');
+
+      if (!title) {
+        alert('모임 주제를 입력해 주세요.');
+        return;
+      }
+      if (!meeting_date) {
+        alert('날짜를 선택해 주세요.');
+        return;
+      }
+      if (!meeting_time) {
+        alert('시간을 선택해 주세요.');
+        return;
+      }
+      if (!max_participants || max_participants < 1) {
+        alert('최대 인원을 올바르게 입력해 주세요.');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 저장 중...';
+
+      const { error } = await supabase.from('meetings').insert([{ 
+        title,
+        meeting_date,
+        meeting_time,
+        location,
+        max_participants,
+        description,
+        status: '모집중'
+      }]);
+
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fas fa-circle-check"></i> 모임 개설';
+
+      if (error) {
+        alert(error.message || '모임 개설 중 오류가 발생했습니다.');
+        return;
+      }
+
+      event.target.reset();
+      alert(`"${title}" 모임이 개설되었습니다.`);
+      switchTab('board');
+      await loadBoard();
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach((button) => {
+        button.classList.toggle('active', button.dataset.tab === tabName);
+      });
+      document.querySelectorAll('.tab-content').forEach((section) => {
+        section.classList.toggle('active', section.id === `tab-${tabName}`);
+      });
+      if (tabName === 'board') loadBoard();
+    }
+
+    function printMembers() {
+      if (!allMembers.length) {
+        alert('인쇄할 참가자 명단이 없습니다.');
+        return;
+      }
+
+      const rows = allMembers.map((member, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${escapeHtml(member.name || '')}</td>
+          <td>${escapeHtml(member.phone || '')}</td>
+          <td>${escapeHtml(member.account || '')}</td>
+          <td>${escapeHtml(formatDateTime(member.applied_at))}</td>
+        </tr>`).join('');
+
+      const printWindow = window.open('', '_blank', 'width=900,height=720');
+      if (!printWindow) return;
+      printWindow.document.write(`<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>${escapeHtml(panelMeetingTitle)} 명단</title>
   <style>
-    body { font-family:'Noto Sans KR','Malgun Gothic',sans-serif; font-size:11pt; }
-    h2   { text-align:center; }
-    table{ width:100%; border-collapse:collapse; }
-    th,td{ border:1px solid #333; padding:5pt 8pt; }
-    th   { background:#2d6a4f; color:#fff; font-weight:bold; }
-    tr:nth-child(even) td { background:#f1f8f5; }
-  </style></head><body>
-  <h2>${panelMeetingTitle} · 참석자 명단</h2>
-  <p style="text-align:center">출력일: ${new Date().toLocaleDateString('ko-KR')} &nbsp;|&nbsp; 총 ${allMembers.length}명</p>
+    body { font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; padding: 24px; font-size: 12px; color: #111827; }
+    h2 { text-align: center; margin-bottom: 8px; }
+    p { text-align: center; color: #4b5563; margin-bottom: 18px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #374151; padding: 8px; text-align: left; }
+    th { background: #2d6a4f; color: #fff; }
+    tr:nth-child(even) td { background: #f1f8f5; }
+    @page { size: A4; margin: 14mm; }
+  </style>
+</head>
+<body>
+  <h2>${escapeHtml(panelMeetingTitle)} · 참석자 명단</h2>
+  <p>출력일: ${escapeHtml(new Date().toLocaleDateString('ko-KR'))} · 총 ${allMembers.length}명</p>
   <table>
-    <thead><tr><th>No.</th><th>이름</th><th>전화번호</th><th>계좌번호</th><th>신청일시</th></tr></thead>
+    <thead>
+      <tr><th>No.</th><th>이름</th><th>전화번호</th><th>계좌번호</th><th>신청일시</th></tr>
+    </thead>
     <tbody>${rows}</tbody>
   </table>
-  </body></html>`;
+</body>
+</html>`);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
 
-  const blob = new Blob(['\ufeff'+html], { type:'application/msword' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `${panelMeetingTitle}_명단.doc`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
+    function downloadWord() {
+      if (!allMembers.length) {
+        alert('저장할 참가자 명단이 없습니다.');
+        return;
+      }
 
-// ─── 새 모임 개설 ─────────────────────────────────────────────
-document.getElementById('newMeetingForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const title = document.getElementById('mTitle').value.trim();
-  const date  = document.getElementById('mDate').value;
-  const max   = parseInt(document.getElementById('mMax').value);
-  const loc   = document.getElementById('mLocation').value.trim();
-  const desc  = document.getElementById('mDesc').value.trim();
+      const rows = allMembers.map((member, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${escapeHtml(member.name || '')}</td>
+          <td>${escapeHtml(member.phone || '')}</td>
+          <td>${escapeHtml(member.account || '')}</td>
+          <td>${escapeHtml(formatDateTime(member.applied_at))}</td>
+        </tr>`).join('');
 
-  if (!title) { alert('모임 주제를 입력해 주세요.'); return; }
-  if (!date)  { alert('날짜를 선택해 주세요.'); return; }
-  if (!max || max < 1) { alert('최대 인원을 올바르게 입력해 주세요.'); return; }
+      const html = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="UTF-8" />
+  <title>${escapeHtml(panelMeetingTitle)} 명단</title>
+  <style>
+    body { font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; font-size: 11pt; }
+    h2 { text-align: center; }
+    p { text-align: center; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #374151; padding: 6pt 8pt; }
+    th { background: #2d6a4f; color: #fff; font-weight: bold; }
+    tr:nth-child(even) td { background: #f1f8f5; }
+  </style>
+</head>
+<body>
+  <h2>${escapeHtml(panelMeetingTitle)} · 참석자 명단</h2>
+  <p>출력일: ${escapeHtml(new Date().toLocaleDateString('ko-KR'))} · 총 ${allMembers.length}명</p>
+  <table>
+    <thead>
+      <tr><th>No.</th><th>이름</th><th>전화번호</th><th>계좌번호</th><th>신청일시</th></tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+</body>
+</html>`;
 
-  const submitBtn = this.querySelector('button[type="submit"]');
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 처리 중...';
+      const blob = new Blob(['\ufeff' + html], { type: 'application/msword' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${panelMeetingTitle}_참석자명단.doc`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
 
-  try {
-    await fetch('tables/meetings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title, date, maxParticipants: max,
-        location: loc, description: desc,
-        status: '모집중',
-        createdAt: new Date().toISOString()
-      })
+    document.getElementById('loginForm').addEventListener('submit', doLogin);
+    document.getElementById('logoutBtn').addEventListener('click', doLogout);
+    document.getElementById('toggleLoginPwd').addEventListener('click', () => {
+      const input = document.getElementById('loginPassword');
+      const icon = document.querySelector('#toggleLoginPwd i');
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      icon.className = isPassword ? 'fas fa-eye-slash' : 'fas fa-eye';
     });
-    this.reset();
-    alert(`"${title}" 모임이 개설되었습니다!`);
-    switchTab('board');
-  } catch(err) {
-    alert('개설 중 오류가 발생했습니다. 다시 시도해 주세요.');
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = '<i class="fas fa-circle-check"></i> 모임 개설';
-  }
-});
-</script>
+
+    document.querySelectorAll('.tab-btn').forEach((button) => {
+      button.addEventListener('click', () => switchTab(button.dataset.tab));
+    });
+
+    document.querySelectorAll('.filter-btn').forEach((button) => {
+      button.addEventListener('click', () => {
+        currentFilter = button.dataset.filter;
+        document.querySelectorAll('.filter-btn').forEach((item) => item.classList.remove('active'));
+        button.classList.add('active');
+        renderBoard();
+      });
+    });
+
+    document.getElementById('goNewMeetingBtn').addEventListener('click', () => switchTab('new'));
+    document.getElementById('cancelNewMeetingBtn').addEventListener('click', () => switchTab('board'));
+    document.getElementById('newMeetingForm').addEventListener('submit', createMeeting);
+    document.getElementById('closeMemberPanelBtn').addEventListener('click', closeMemberPanel);
+    memberSearchEl.addEventListener('input', filterMembers);
+    document.getElementById('printMembersBtn').addEventListener('click', printMembers);
+    document.getElementById('downloadWordBtn').addEventListener('click', downloadWord);
+    document.getElementById('cancelDeleteBtn').addEventListener('click', closeDeleteModal);
+    document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDelete);
+
+    if (!isConfigured()) {
+      showConfigAlert();
+      setLoginError('Supabase 연결 정보를 먼저 입력해 주세요.');
+    } else {
+      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) showAdmin(session.user);
+        else showLogin();
+      });
+      restoreSession();
+    }
+  </script>
 </body>
 </html>
