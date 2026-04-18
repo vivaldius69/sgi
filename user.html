@@ -3,14 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>모임 신청 | 모임 모집 시스템</title>
+  <title>걷기모임 신청 | 걷기모임 모집 시스템</title>
+  <meta name="description" content="모집 중인 걷기모임을 선택하고 참가 신청을 접수합니다." />
   <link rel="stylesheet" href="css/style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css" />
 </head>
 <body>
-  <!-- 헤더 -->
   <header class="site-header">
     <div class="header-inner">
       <a href="index.html" class="back-btn"><i class="fas fa-arrow-left"></i> 홈으로</a>
@@ -18,68 +19,68 @@
         <i class="fas fa-user-check"></i>
         <span>참가자 신청</span>
       </div>
-      <div style="width:80px"></div>
+      <div class="header-spacer"></div>
     </div>
   </header>
 
   <main class="page-main">
-    <!-- 안내 배너 -->
+    <div id="configAlert" class="config-alert" style="display:none;"></div>
+
     <div class="info-banner">
       <i class="fas fa-circle-info"></i>
-      <span>아래 모집 중인 모임을 선택하고 신청서를 작성해 주세요.</span>
+      <span>원하는 걷기모임을 선택한 뒤 신청서를 작성해 주세요. 중복 신청은 자동으로 차단됩니다.</span>
     </div>
 
-    <!-- 모임 목록 -->
     <section class="section-block">
-      <h2 class="section-title"><i class="fas fa-list-ul"></i> 현재 모집 중인 모임</h2>
+      <h2 class="section-title"><i class="fas fa-list-ul"></i> 현재 모집 중인 걷기모임</h2>
       <div id="meetingList" class="meeting-list">
         <div class="loading-state">
           <i class="fas fa-spinner fa-spin"></i>
-          <p>모임 목록 불러오는 중...</p>
+          <p>모임 목록을 불러오는 중입니다...</p>
         </div>
       </div>
     </section>
 
-    <!-- 신청 폼 (모임 선택 후 표시) -->
     <section id="applySection" class="section-block" style="display:none;">
       <h2 class="section-title"><i class="fas fa-pen-to-square"></i> 신청서 작성</h2>
-
-      <div class="selected-meeting-info" id="selectedMeetingInfo"></div>
+      <div id="selectedMeetingInfo" class="selected-meeting-info"></div>
 
       <form id="applyForm" class="apply-form" novalidate>
         <div class="form-group">
           <label for="userName">이름 <span class="required">*</span></label>
-          <input type="text" id="userName" placeholder="실명을 입력해 주세요" maxlength="20" autocomplete="name" />
+          <input type="text" id="userName" maxlength="20" placeholder="실명을 입력해 주세요" autocomplete="name" />
           <span class="field-hint">예: 홍길동</span>
         </div>
+
         <div class="form-group">
           <label for="userPhone">전화번호 <span class="required">*</span></label>
-          <input type="tel" id="userPhone" placeholder="010-0000-0000" maxlength="13" inputmode="numeric" autocomplete="tel" />
+          <input type="tel" id="userPhone" maxlength="13" inputmode="numeric" placeholder="010-0000-0000" autocomplete="tel" />
           <span class="field-hint">숫자만 입력하면 자동으로 하이픈이 붙습니다.</span>
         </div>
+
         <div class="form-group">
           <label for="userAccount">계좌번호 <span class="required">*</span></label>
-          <input type="text" id="userAccount" placeholder="예: 신한 110-123-456789" maxlength="40" inputmode="numeric" />
+          <input type="text" id="userAccount" maxlength="50" placeholder="예: 신한 110-123-456789" />
           <span class="field-hint">은행명과 계좌번호를 함께 입력해 주세요.</span>
         </div>
+
         <div class="form-actions">
           <button type="button" id="cancelApply" class="btn btn-secondary">
             <i class="fas fa-xmark"></i> 취소
           </button>
-          <button type="submit" class="btn btn-primary">
+          <button type="submit" id="submitApplyBtn" class="btn btn-primary">
             <i class="fas fa-paper-plane"></i> 신청하기
           </button>
         </div>
       </form>
     </section>
 
-    <!-- 신청 완료 메시지 -->
     <div id="successMessage" class="success-overlay" style="display:none;">
       <div class="success-box">
         <div class="success-icon"><i class="fas fa-circle-check"></i></div>
-        <h3>신청이 완료되었습니다!</h3>
+        <h3>신청이 완료되었습니다</h3>
         <p id="successDetail"></p>
-        <button class="btn btn-primary" onclick="resetForm()">
+        <button class="btn btn-primary" id="successResetBtn">
           <i class="fas fa-rotate-left"></i> 처음으로
         </button>
       </div>
@@ -90,163 +91,231 @@
     <p>문의사항은 모임 주최자에게 연락해 주세요.</p>
   </footer>
 
-  <script>
-    // ─── 상태 ────────────────────────────────────────────────
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    // 반드시 본인 Supabase 값으로 바꿔 주세요.
+    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_OR_PUBLISHABLE_KEY';
+
+    const configAlert = document.getElementById('configAlert');
+    const meetingListEl = document.getElementById('meetingList');
+    const applySectionEl = document.getElementById('applySection');
+    const selectedMeetingInfoEl = document.getElementById('selectedMeetingInfo');
+    const applyFormEl = document.getElementById('applyForm');
+    const submitApplyBtn = document.getElementById('submitApplyBtn');
+    const successMessageEl = document.getElementById('successMessage');
+    const successDetailEl = document.getElementById('successDetail');
+
+    let supabase = null;
+    let meetings = [];
     let selectedMeeting = null;
 
-    // ─── 유틸 ────────────────────────────────────────────────
+    function isConfigured() {
+      return !SUPABASE_URL.includes('YOUR_PROJECT') && !SUPABASE_ANON_KEY.includes('YOUR_SUPABASE');
+    }
+
+    function showConfigAlert() {
+      configAlert.style.display = 'flex';
+      configAlert.innerHTML = '<i class="fas fa-triangle-exclamation"></i><div><strong>Supabase 설정이 필요합니다.</strong><br />user.html 상단의 <code>SUPABASE_URL</code>, <code>SUPABASE_ANON_KEY</code>를 본인 프로젝트 값으로 바꿔 주세요.</div>';
+    }
+
+    function normalizePhone(value) {
+      return value.replace(/\D/g, '').slice(0, 11);
+    }
+
+    function formatPhone(value) {
+      const n = normalizePhone(value);
+      if (n.length < 4) return n;
+      if (n.length < 8) return `${n.slice(0, 3)}-${n.slice(3)}`;
+      return `${n.slice(0, 3)}-${n.slice(3, 7)}-${n.slice(7, 11)}`;
+    }
+
     function formatDate(dateStr) {
       if (!dateStr) return '';
-      const d = new Date(dateStr);
-      if (isNaN(d)) return dateStr;
-      return d.toLocaleDateString('ko-KR', { year:'numeric', month:'long', day:'numeric', weekday:'short' });
+      const date = new Date(`${dateStr}T00:00:00`);
+      return date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'short'
+      });
     }
 
-    function formatPhone(v) {
-      const n = v.replace(/\D/g,'');
-      if (n.length < 4) return n;
-      if (n.length < 8) return n.slice(0,3)+'-'+n.slice(3);
-      return n.slice(0,3)+'-'+n.slice(3,7)+'-'+n.slice(7,11);
+    function formatTime(timeStr) {
+      if (!timeStr) return '';
+      return timeStr.slice(0, 5);
     }
 
-    // ─── 모임 목록 로드 ───────────────────────────────────────
-    async function loadMeetings() {
-      const listEl = document.getElementById('meetingList');
-      try {
-        const res = await fetch('tables/meetings?limit=100&sort=createdAt');
-        const data = await res.json();
-        const meetings = (data.data || []).filter(m => m.status === '모집중');
+    function formatMeetingDateTime(meeting) {
+      return `${formatDate(meeting.meeting_date)} · ${formatTime(meeting.meeting_time)}`;
+    }
 
-        if (meetings.length === 0) {
-          listEl.innerHTML = `
-            <div class="empty-state">
-              <i class="fas fa-calendar-xmark"></i>
-              <p>현재 모집 중인 모임이 없습니다.<br>나중에 다시 확인해 주세요.</p>
-            </div>`;
-          return;
-        }
+    function escapeHtml(value = '') {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
-        listEl.innerHTML = '';
-        for (const m of meetings) {
-          // 참가자 수 조회
-          const pRes = await fetch(`tables/participants?limit=1000`);
-          const pData = await pRes.json();
-          const count = (pData.data || []).filter(p => p.meetingId === m.id).length;
-          const full = count >= m.maxParticipants;
+    function renderMeetings() {
+      if (!meetings.length) {
+        meetingListEl.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-calendar-xmark"></i>
+            <p>현재 모집 중인 걷기모임이 없습니다.<br />나중에 다시 확인해 주세요.</p>
+          </div>`;
+        return;
+      }
 
-          const card = document.createElement('div');
-          card.className = `meeting-card ${full ? 'full' : ''}`;
-          card.innerHTML = `
+      meetingListEl.innerHTML = meetings.map((meeting) => {
+        const full = meeting.current_participants >= meeting.max_participants || meeting.status === '마감';
+        return `
+          <article class="meeting-card ${full ? 'full' : ''}">
             <div class="meeting-card-header">
-              <h3>${m.title}</h3>
+              <h3>${escapeHtml(meeting.title)}</h3>
               <span class="badge ${full ? 'badge-full' : 'badge-open'}">${full ? '마감' : '모집중'}</span>
             </div>
             <div class="meeting-card-info">
-              <span><i class="fas fa-calendar-day"></i> ${formatDate(m.date)}</span>
-              <span><i class="fas fa-location-dot"></i> ${m.location || '미정'}</span>
-              <span><i class="fas fa-users"></i> ${count} / ${m.maxParticipants}명</span>
+              <span><i class="fas fa-calendar-day"></i> ${escapeHtml(formatMeetingDateTime(meeting))}</span>
+              <span><i class="fas fa-location-dot"></i> ${escapeHtml(meeting.location || '장소 미정')}</span>
+              <span><i class="fas fa-users"></i> ${meeting.current_participants} / ${meeting.max_participants}명</span>
             </div>
-            ${m.description ? `<p class="meeting-desc">${m.description}</p>` : ''}
-            <button class="btn ${full ? 'btn-disabled' : 'btn-primary'} btn-full"
-              onclick="${full ? '' : `selectMeeting('${m.id}')`}"
-              ${full ? 'disabled' : ''}>
+            ${meeting.description ? `<p class="meeting-desc">${escapeHtml(meeting.description)}</p>` : ''}
+            <button class="btn ${full ? 'btn-disabled' : 'btn-primary'} btn-full" ${full ? 'disabled' : ''} data-meeting-id="${meeting.id}">
               ${full ? '<i class="fas fa-lock"></i> 마감되었습니다' : '<i class="fas fa-pen-to-square"></i> 이 모임 신청하기'}
             </button>
-          `;
-          listEl.appendChild(card);
-        }
-      } catch(e) {
-        listEl.innerHTML = `<div class="error-state"><i class="fas fa-triangle-exclamation"></i><p>불러오기 실패. 잠시 후 다시 시도해 주세요.</p></div>`;
-      }
+          </article>`;
+      }).join('');
+
+      meetingListEl.querySelectorAll('[data-meeting-id]').forEach((button) => {
+        button.addEventListener('click', () => selectMeeting(button.dataset.meetingId));
+      });
     }
 
-    // ─── 모임 선택 ────────────────────────────────────────────
-    async function selectMeeting(meetingId) {
-      const res = await fetch(`tables/meetings/${meetingId}`);
-      selectedMeeting = await res.json();
+    async function loadMeetings() {
+      if (!supabase) return;
+      meetingListEl.innerHTML = `
+        <div class="loading-state">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>모임 목록을 불러오는 중입니다...</p>
+        </div>`;
 
-      const infoEl = document.getElementById('selectedMeetingInfo');
-      infoEl.innerHTML = `
+      const { data, error } = await supabase
+        .from('meetings')
+        .select('id, title, meeting_date, meeting_time, location, max_participants, current_participants, description, status, created_at')
+        .eq('status', '모집중')
+        .order('meeting_date', { ascending: true })
+        .order('meeting_time', { ascending: true });
+
+      if (error) {
+        meetingListEl.innerHTML = `
+          <div class="error-state">
+            <i class="fas fa-triangle-exclamation"></i>
+            <p>모임을 불러오지 못했습니다.<br />Supabase 설정과 RLS 정책을 확인해 주세요.</p>
+          </div>`;
+        return;
+      }
+
+      meetings = data || [];
+      renderMeetings();
+    }
+
+    function selectMeeting(meetingId) {
+      selectedMeeting = meetings.find((meeting) => meeting.id === meetingId) || null;
+      if (!selectedMeeting) return;
+
+      selectedMeetingInfoEl.innerHTML = `
         <div class="selected-badge"><i class="fas fa-circle-check"></i> 선택된 모임</div>
-        <strong>${selectedMeeting.title}</strong>
-        <span>${formatDate(selectedMeeting.date)} · ${selectedMeeting.location || '미정'}</span>
-      `;
+        <strong>${escapeHtml(selectedMeeting.title)}</strong>
+        <span>${escapeHtml(formatMeetingDateTime(selectedMeeting))} · ${escapeHtml(selectedMeeting.location || '장소 미정')}</span>
+        <span>모집 현황 ${selectedMeeting.current_participants} / ${selectedMeeting.max_participants}명</span>`;
 
-      document.getElementById('applySection').style.display = 'block';
-      document.getElementById('applySection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      applySectionEl.style.display = 'block';
+      applySectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    // ─── 폼 취소 ─────────────────────────────────────────────
-    document.getElementById('cancelApply').addEventListener('click', () => {
-      selectedMeeting = null;
-      document.getElementById('applySection').style.display = 'none';
-      document.getElementById('applyForm').reset();
-    });
-
-    // ─── 전화번호 자동 포맷 ──────────────────────────────────
-    document.getElementById('userPhone').addEventListener('input', function() {
-      const cur = this.selectionStart;
-      this.value = formatPhone(this.value);
-    });
-
-    // ─── 신청 제출 ────────────────────────────────────────────
-    document.getElementById('applyForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const name    = document.getElementById('userName').value.trim();
-      const phone   = document.getElementById('userPhone').value.trim();
-      const account = document.getElementById('userAccount').value.trim();
-
-      if (!name)    { alert('이름을 입력해 주세요.'); return; }
-      if (!phone || phone.replace(/\D/g,'').length < 10) { alert('전화번호를 올바르게 입력해 주세요.'); return; }
-      if (!account) { alert('계좌번호를 입력해 주세요.'); return; }
-      if (!selectedMeeting) { alert('모임을 선택해 주세요.'); return; }
-
-      // 중복 확인
-      const pRes = await fetch('tables/participants?limit=1000');
-      const pData = await pRes.json();
-      const existing = (pData.data || []).find(p => p.meetingId === selectedMeeting.id && p.phone === phone);
-      if (existing) { alert('이미 같은 전화번호로 신청된 내역이 있습니다.'); return; }
-
-      // 인원 초과 확인
-      const count = (pData.data || []).filter(p => p.meetingId === selectedMeeting.id).length;
-      if (count >= selectedMeeting.maxParticipants) { alert('모집 인원이 마감되었습니다.'); return; }
-
-      const submitBtn = this.querySelector('button[type="submit"]');
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 처리 중...';
-
-      try {
-        await fetch('tables/participants', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            meetingId: selectedMeeting.id,
-            name, phone, account,
-            appliedAt: new Date().toISOString()
-          })
-        });
-
-        document.getElementById('successDetail').textContent =
-          `${selectedMeeting.title} 모임에 ${name}님의 신청이 완료되었습니다.`;
-        document.getElementById('successMessage').style.display = 'flex';
-      } catch(err) {
-        alert('신청 중 오류가 발생했습니다. 다시 시도해 주세요.');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 신청하기';
-      }
-    });
-
-    // ─── 초기화 ───────────────────────────────────────────────
     function resetForm() {
       selectedMeeting = null;
-      document.getElementById('applyForm').reset();
-      document.getElementById('applySection').style.display = 'none';
-      document.getElementById('successMessage').style.display = 'none';
-      loadMeetings();
+      applyFormEl.reset();
+      applySectionEl.style.display = 'none';
+      successMessageEl.style.display = 'none';
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      loadMeetings();
     }
 
-    loadMeetings();
+    async function submitApplication(event) {
+      event.preventDefault();
+      if (!supabase || !selectedMeeting) {
+        alert('먼저 모임을 선택해 주세요.');
+        return;
+      }
+
+      const name = document.getElementById('userName').value.trim();
+      const phone = normalizePhone(document.getElementById('userPhone').value);
+      const account = document.getElementById('userAccount').value.trim();
+
+      if (!name) {
+        alert('이름을 입력해 주세요.');
+        return;
+      }
+      if (phone.length < 10) {
+        alert('전화번호를 올바르게 입력해 주세요.');
+        return;
+      }
+      if (!account) {
+        alert('계좌번호를 입력해 주세요.');
+        return;
+      }
+
+      submitApplyBtn.disabled = true;
+      submitApplyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 처리 중...';
+
+      const { error } = await supabase.rpc('apply_to_meeting', {
+        p_meeting_id: selectedMeeting.id,
+        p_name: name,
+        p_phone: phone,
+        p_account: account
+      });
+
+      submitApplyBtn.disabled = false;
+      submitApplyBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 신청하기';
+
+      if (error) {
+        alert(error.message || '신청 중 오류가 발생했습니다.');
+        return;
+      }
+
+      successDetailEl.textContent = `${selectedMeeting.title} 모임에 ${name}님의 신청이 완료되었습니다.`;
+      successMessageEl.style.display = 'flex';
+    }
+
+    document.getElementById('userPhone').addEventListener('input', (event) => {
+      event.target.value = formatPhone(event.target.value);
+    });
+
+    document.getElementById('cancelApply').addEventListener('click', () => {
+      selectedMeeting = null;
+      applyFormEl.reset();
+      applySectionEl.style.display = 'none';
+    });
+
+    document.getElementById('successResetBtn').addEventListener('click', resetForm);
+    applyFormEl.addEventListener('submit', submitApplication);
+
+    if (!isConfigured()) {
+      showConfigAlert();
+      meetingListEl.innerHTML = `
+        <div class="error-state">
+          <i class="fas fa-wrench"></i>
+          <p>Supabase 연결 정보를 먼저 입력해 주세요.</p>
+        </div>`;
+    } else {
+      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      loadMeetings();
+    }
   </script>
 </body>
 </html>
